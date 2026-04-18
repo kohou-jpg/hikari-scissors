@@ -21,15 +21,23 @@
         
         .main-layout { display: flex; gap: 20px; flex-wrap: wrap; }
         
-        /* Sidebar */
+        /* Sidebar & Mobile Collapse */
         .sidebar { flex: 1; min-width: 280px; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); height: fit-content; position: sticky; top: 20px; }
         .filter-section { margin-bottom: 20px; border-bottom: 1px solid #f0f0f0; padding-bottom: 15px; }
         .filter-title { display: block; margin-bottom: 15px; font-weight: bold; border-left: 4px solid var(--primary); padding-left: 10px; }
-        .opt-group { display: flex; flex-direction: column; gap: 8px; }
-        .opt-group label { display: flex; align-items: center; cursor: pointer; font-size: 0.9em; color: #444; }
-        .opt-group input { margin-right: 12px; width: 18px; height: 18px; accent-color: var(--primary); }
+        .opt-group { display: flex; flex-direction: column; gap: 4px; }
+        
+        /* 升级3：扩大点击热区 */
+        .opt-group label { display: flex; align-items: center; cursor: pointer; font-size: 0.95em; color: #444; padding: 8px 0; transition: 0.2s;}
+        .opt-group label:hover { color: var(--accent); }
+        .opt-group input { margin-right: 12px; width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;}
+        
         .sort-select, .search-input { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid var(--border); background: #fff; font-weight: bold; box-sizing: border-box;}
         .search-input { font-weight: normal; margin-bottom: 5px; }
+
+        /* Mobile Filter Toggle Button */
+        .mobile-filter-btn { display: none; width: 100%; padding: 12px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 1em; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .filter-content { display: block; }
 
         /* Content Area */
         .content { flex: 3; min-width: 350px; }
@@ -37,10 +45,13 @@
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
         
         /* Card Design */
-        .card { background: #fff; border-radius: 10px; border: 1px solid var(--border); overflow: hidden; transition: 0.3s; display: flex; flex-direction: column; height: 100%; }
+        .card { background: #fff; border-radius: 10px; border: 1px solid var(--border); overflow: hidden; transition: 0.3s; display: flex; flex-direction: column; height: 100%; position: relative;}
         .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-        .card-img { width: 100%; height: 180px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; border-bottom: 1px solid #f9f9f9;}
+        .card-img { width: 100%; height: 180px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; border-bottom: 1px solid #f9f9f9; position: relative;}
         .card-img img { width: 100%; height: 100%; object-fit: contain; }
+        
+        /* 升级1：右上角折扣标签 */
+        .discount-badge { position: absolute; top: 10px; right: 10px; background: #e74c3c; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: bold; z-index: 10; box-shadow: 0 2px 5px rgba(231,76,60,0.3); letter-spacing: 0.5px;}
         
         .card-body { padding: 18px; flex-grow: 1; display: flex; flex-direction: column; }
         .series-tag { font-size: 0.7em; font-weight: bold; color: #999; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;}
@@ -59,7 +70,19 @@
         .special-label { font-size: 0.75em; font-weight: 900; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; display: block; }
         .price-val-special { font-size: 1.7em; font-weight: 900; color: var(--accent); text-align: right; line-height: 1; }
 
-        @media (max-width: 768px) { .main-layout { flex-direction: column; } .sidebar { position: static; width: auto; } }
+        /* 升级4：返回顶部悬浮按钮 */
+        #back-to-top { position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; background: var(--primary); color: #fff; border: none; border-radius: 50%; font-size: 1.5em; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: none; z-index: 1000; transition: 0.3s; line-height: 1;}
+        #back-to-top:hover { background: var(--accent); transform: translateY(-3px); }
+
+        /* 升级2：移动端折叠适配 */
+        @media (max-width: 768px) { 
+            .main-layout { flex-direction: column; } 
+            .sidebar { position: static; width: auto; padding: 15px;} 
+            .mobile-filter-btn { display: block; } /* 手机上显示按钮 */
+            .filter-content { display: none; } /* 手机上默认隐藏筛选区 */
+            .filter-content.active { display: block; margin-top: 15px;} /* 点击后展开 */
+            #back-to-top { bottom: 20px; right: 20px; width: 45px; height: 45px; font-size: 1.2em;}
+        }
     </style>
 </head>
 <body>
@@ -75,46 +98,50 @@
 
 <div class="main-layout">
     <div class="sidebar">
-        <div class="filter-section">
-            <span class="filter-title" id="f-search">商品名検索</span>
-            <input type="search" id="search-input" class="search-input" placeholder="输入型号..." oninput="updateFilters()">
-        </div>
-
-        <div class="filter-section">
-            <span class="filter-title" id="f-sort">排序方式</span>
-            <select id="sort-order" class="sort-select" onchange="updateFilters()">
-                <option value="default">默认编号</option>
-                <option value="price-asc">价格：低到高</option>
-                <option value="price-desc">价格：高到低</option>
-            </select>
-        </div>
-
-        <div class="filter-section">
-            <span class="filter-title" id="f-type">分类查询</span>
-            <div class="opt-group">
-                <label><input type="checkbox" class="f-cat" value="平剪"> <span id="label-blunt">平剪</span></label>
-                <label><input type="checkbox" class="f-cat" value="牙剪"> <span id="label-thin">牙剪</span></label>
-                <label><input type="checkbox" class="f-cat" value="滑剪"> <span id="label-slide">滑剪</span></label>
-                <label><input type="checkbox" class="f-cat" value="左手剪"> <span id="label-lefty">左手剪</span></label>
+        <button id="mobile-filter-btn" class="mobile-filter-btn" onclick="toggleMobileFilter()">⚙️ 展开/收起筛选</button>
+        
+        <div id="filter-content" class="filter-content">
+            <div class="filter-section">
+                <span class="filter-title" id="f-search">商品名検索</span>
+                <input type="search" id="search-input" class="search-input" placeholder="输入型号..." oninput="updateFilters()">
             </div>
-        </div>
 
-        <div class="filter-section">
-            <span class="filter-title" id="f-size">尺寸 (英寸)</span>
-            <div class="opt-group">
-                <label><input type="checkbox" class="f-size" value="5"> 5.0" - 5.9"</label>
-                <label><input type="checkbox" class="f-size" value="6"> 6.0" - 6.9"</label>
-                <label><input type="checkbox" class="f-size" value="7"> 7.0" - 7.9"</label>
+            <div class="filter-section">
+                <span class="filter-title" id="f-sort">排序方式</span>
+                <select id="sort-order" class="sort-select" onchange="updateFilters()">
+                    <option value="default">默认编号</option>
+                    <option value="price-asc">价格：低到高</option>
+                    <option value="price-desc">价格：高到低</option>
+                </select>
             </div>
-        </div>
 
-        <div class="filter-section">
-            <span class="filter-title" id="f-rate">打薄率 (仅牙剪)</span>
-            <div class="opt-group">
-                <label><input type="checkbox" class="f-rate" value="0-20"> 10% - 20%</label>
-                <label><input type="checkbox" class="f-rate" value="20-30"> 20% - 30%</label>
-                <label><input type="checkbox" class="f-rate" value="30-40"> 30% - 40%</label>
-                <label><input type="checkbox" class="f-rate" value="40-100"> <span id="label-rate-40">40% 以上</span></label>
+            <div class="filter-section">
+                <span class="filter-title" id="f-type">分类查询</span>
+                <div class="opt-group">
+                    <label><input type="checkbox" class="f-cat" value="平剪"> <span id="label-blunt">平剪</span></label>
+                    <label><input type="checkbox" class="f-cat" value="牙剪"> <span id="label-thin">牙剪</span></label>
+                    <label><input type="checkbox" class="f-cat" value="滑剪"> <span id="label-slide">滑剪</span></label>
+                    <label><input type="checkbox" class="f-cat" value="左手剪"> <span id="label-lefty">左手剪</span></label>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <span class="filter-title" id="f-size">尺寸 (英寸)</span>
+                <div class="opt-group">
+                    <label><input type="checkbox" class="f-size" value="5"> 5.0" - 5.9"</label>
+                    <label><input type="checkbox" class="f-size" value="6"> 6.0" - 6.9"</label>
+                    <label><input type="checkbox" class="f-size" value="7"> 7.0" - 7.9"</label>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <span class="filter-title" id="f-rate">打薄率 (仅牙剪)</span>
+                <div class="opt-group">
+                    <label><input type="checkbox" class="f-rate" value="0-20"> 10% - 20%</label>
+                    <label><input type="checkbox" class="f-rate" value="20-30"> 20% - 30%</label>
+                    <label><input type="checkbox" class="f-rate" value="30-40"> 30% - 40%</label>
+                    <label><input type="checkbox" class="f-rate" value="40-100"> <span id="label-rate-40">40% 以上</span></label>
+                </div>
             </div>
         </div>
     </div>
@@ -125,12 +152,14 @@
     </div>
 </div>
 
+<button id="back-to-top" onclick="scrollToTop()" title="Back to Top">↑</button>
+
 <script>
     // --- 翻译数据字典 ---
     const i18n = {
-        zh: { title: "HIKARI 2026 全系列筛选系统", f_search: "搜索型号", search_placeholder: "输入型号或系列...", f_sort: "排序方式", f_type: "分类查询", f_size: "尺寸 (英寸)", f_rate: "打薄率 (仅牙剪)", count: "找到 {n} 款型号", model: "型号", size: "尺寸", mat: "材质", def_sort: "默认编号", p_low: "价格：低到高", p_high: "价格：高到低", blunt: "平剪 (BLUNT)", thin: "牙剪 (THINNING)", slide: "滑剪 (SLIDE)", lefty: "左手剪 (LEFTY)", special_label: "FIVE 优惠价 (+tax)", rate_40: "40% 以上" },
-        ja: { title: "HIKARI 2026 カタログ検索", f_search: "品番検索", search_placeholder: "品番・シリーズを入力...", f_sort: "並べ替え", f_type: "分類", f_size: "サイズ", f_rate: "スキ率 (セニングのみ)", count: "{n} 件のモデル", model: "品番", size: "サイズ", mat: "材質", def_sort: "標準", p_low: "安い順", p_high: "高い順", blunt: "ブラント", thin: "セニング", slide: "スライド", lefty: "レフティ", special_label: "ファイブ価格 (+tax)", rate_40: "40% 以上" },
-        en: { title: "HIKARI 2026 Catalog", f_search: "Search Model", search_placeholder: "Enter model or series...", f_sort: "Sort By", f_type: "Category", f_size: "Size", f_rate: "Thinning Ratio", count: "Found {n} models", model: "Model", size: "Size", mat: "Material", def_sort: "Default", p_low: "Price: Asc", p_high: "Price: Desc", blunt: "Blunt", thin: "Thinning", slide: "Slide", lefty: "Lefty", special_label: "FIVE special price (+tax)", rate_40: "Over 40%" }
+        zh: { title: "HIKARI 2026 全系列筛选系统", f_search: "搜索型号", search_placeholder: "输入型号或系列...", f_sort: "排序方式", f_type: "分类查询", f_size: "尺寸 (英寸)", f_rate: "打薄率 (仅牙剪)", count: "找到 {n} 款型号", model: "型号", size: "尺寸", mat: "材质", def_sort: "默认编号", p_low: "价格：低到高", p_high: "价格：高到低", blunt: "平剪 (BLUNT)", thin: "牙剪 (THINNING)", slide: "滑剪 (SLIDE)", lefty: "左手剪 (LEFTY)", special_label: "FIVE 优惠价 (+tax)", rate_40: "40% 以上", toggle_btn: "⚙️ 展开 / 收起筛选", discount: "定价 15% OFF" },
+        ja: { title: "HIKARI 2026 カタログ検索", f_search: "品番検索", search_placeholder: "品番・シリーズを入力...", f_sort: "並べ替え", f_type: "分類", f_size: "サイズ", f_rate: "スキ率 (セニングのみ)", count: "{n} 件のモデル", model: "品番", size: "サイズ", mat: "材質", def_sort: "標準", p_low: "安い順", p_high: "高い順", blunt: "ブラント", thin: "セニング", slide: "スライド", lefty: "レフティ", special_label: "ファイブ価格 (+tax)", rate_40: "40% 以上", toggle_btn: "⚙️ 絞り込みを開閉", discount: "定価 15% OFF" },
+        en: { title: "HIKARI 2026 Catalog", f_search: "Search Model", search_placeholder: "Enter model or series...", f_sort: "Sort By", f_type: "Category", f_size: "Size", f_rate: "Thinning Ratio", count: "Found {n} models", model: "Model", size: "Size", mat: "Material", def_sort: "Default", p_low: "Price: Asc", p_high: "Price: Desc", blunt: "Blunt", thin: "Thinning", slide: "Slide", lefty: "Lefty", special_label: "FIVE special price (+tax)", rate_40: "Over 40%", toggle_btn: "⚙️ Toggle Filters", discount: "Regular price 15% OFF" }
     };
 
     // --- 系列描述与材质 ---
@@ -179,8 +208,8 @@
         document.getElementById('f-size').innerText = i18n[lang].f_size;
         
         document.getElementById('f-rate').innerText = i18n[lang].f_rate;
-        // 动态切换“40%以上”的文本
         document.getElementById('label-rate-40').innerText = i18n[lang].rate_40;
+        document.getElementById('mobile-filter-btn').innerText = i18n[lang].toggle_btn;
         
         const s = document.getElementById('sort-order');
         s.options[0].text = i18n[lang].def_sort;
@@ -193,6 +222,23 @@
         document.getElementById('label-lefty').innerText = i18n[lang].lefty;
         
         updateFilters();
+    }
+
+    // 移动端折叠控制
+    function toggleMobileFilter() {
+        document.getElementById('filter-content').classList.toggle('active');
+    }
+
+    // 悬浮返回顶部控制
+    window.onscroll = function() {
+        if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
+            document.getElementById("back-to-top").style.display = "block";
+        } else {
+            document.getElementById("back-to-top").style.display = "none";
+        }
+    };
+    function scrollToTop() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function updateFilters() {
@@ -239,9 +285,9 @@
             const rateBadge = (p.cat.includes('牙剪') && p.rate > 0) ? `<span class="badge badge-red">Rate: ${p.rateLabel}</span>` : '';
             const catKey = p.cat === '平剪' ? 'blunt' : p.cat === '牙剪' ? 'thin' : p.cat === '滑剪' ? 'slide' : 'lefty';
             
-            // 升级：加入 loading="lazy" 进行图片懒加载优化
             card.innerHTML = `
                 <div class="card-img">
+                    <div class="discount-badge">${i18n[curLang].discount}</div>
                     <img src="images/${p.model}.jpg" loading="lazy" onerror="this.src='https://placehold.co/400x300?text=${p.model}'" alt="${p.model}">
                 </div>
                 <div class="card-body">
