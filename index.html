@@ -101,6 +101,16 @@
                 <label><input type="checkbox" class="f-size" value="7"> 7.0" - 7.9"</label>
             </div>
         </div>
+
+        <div class="filter-section">
+            <span class="filter-title" id="f-rate">打薄率 (仅牙剪)</span>
+            <div class="opt-group">
+                <label><input type="checkbox" class="f-rate" value="0-20"> 10% - 20%</label>
+                <label><input type="checkbox" class="f-rate" value="20-30"> 20% - 30%</label>
+                <label><input type="checkbox" class="f-rate" value="30-40"> 30% - 40%</label>
+                <label><input type="checkbox" class="f-rate" value="40-100"> 40% 以上</label>
+            </div>
+        </div>
     </div>
 
     <div class="content">
@@ -112,9 +122,9 @@
 <script>
     // --- 翻訳データ ---
     const i18n = {
-        zh: { title: "HIKARI 2026 全系列筛选系统", f_search: "搜索型号", search_placeholder: "输入型号或系列...", f_sort: "排序方式", f_type: "分类查询", f_size: "尺寸 (英寸)", count: "找到 {n} 款型号", model: "型号", size: "尺寸", mat: "材质", def_sort: "默认编号", p_low: "价格：低到高", p_high: "价格：高到低", blunt: "平剪 (BLUNT)", thin: "牙剪 (THINNING)", slide: "滑剪 (SLIDE)", lefty: "左手剪 (LEFTY)", special_label: "FIVE 优惠价" },
-        ja: { title: "HIKARI 2026 カタログ検索", f_search: "品番検索", search_placeholder: "品番・シリーズを入力...", f_sort: "並べ替え", f_type: "分類", f_size: "サイズ", count: "{n} 件のモデル", model: "品番", size: "サイズ", mat: "材質", def_sort: "標準", p_low: "安い順", p_high: "高い順", blunt: "ブラント", thin: "セニング", slide: "スライド", lefty: "レフティ", special_label: "ファイブ価格" },
-        en: { title: "HIKARI 2026 Catalog", f_search: "Search Model", search_placeholder: "Enter model or series...", f_sort: "Sort By", f_type: "Category", f_size: "Size", count: "Found {n} models", model: "Model", size: "Size", mat: "Material", def_sort: "Default", p_low: "Price: Asc", p_high: "Price: Desc", blunt: "Blunt", thin: "Thinning", slide: "Slide", lefty: "Lefty", special_label: "FIVE special price" }
+        zh: { title: "HIKARI 2026 全系列筛选系统", f_search: "搜索型号", search_placeholder: "输入型号或系列...", f_sort: "排序方式", f_type: "分类查询", f_size: "尺寸 (英寸)", f_rate: "打薄率 (仅牙剪)", count: "找到 {n} 款型号", model: "型号", size: "尺寸", mat: "材质", def_sort: "默认编号", p_low: "价格：低到高", p_high: "价格：高到低", blunt: "平剪 (BLUNT)", thin: "牙剪 (THINNING)", slide: "滑剪 (SLIDE)", lefty: "左手剪 (LEFTY)", special_label: "FIVE 优惠价" },
+        ja: { title: "HIKARI 2026 カタログ検索", f_search: "品番検索", search_placeholder: "品番・シリーズを入力...", f_sort: "並べ替え", f_type: "分類", f_size: "サイズ", f_rate: "スキ率 (セニングのみ)", count: "{n} 件のモデル", model: "品番", size: "サイズ", mat: "材質", def_sort: "標準", p_low: "安い順", p_high: "高い順", blunt: "ブラント", thin: "セニング", slide: "スライド", lefty: "レフティ", special_label: "ファイブ価格" },
+        en: { title: "HIKARI 2026 Catalog", f_search: "Search Model", search_placeholder: "Enter model or series...", f_sort: "Sort By", f_type: "Category", f_size: "Size", f_rate: "Thinning Ratio", count: "Found {n} models", model: "Model", size: "Size", mat: "Material", def_sort: "Default", p_low: "Price: Asc", p_high: "Price: Desc", blunt: "Blunt", thin: "Thinning", slide: "Slide", lefty: "Lefty", special_label: "FIVE special price" }
     };
 
     // --- シリーズ別説明・材質 ---
@@ -162,6 +172,9 @@
         document.getElementById('f-type').innerText = i18n[lang].f_type;
         document.getElementById('f-size').innerText = i18n[lang].f_size;
         
+        // 復活させたスキ率（打薄率）の翻訳更新
+        document.getElementById('f-rate').innerText = i18n[lang].f_rate;
+        
         const s = document.getElementById('sort-order');
         s.options[0].text = i18n[lang].def_sort;
         s.options[1].text = i18n[lang].p_low;
@@ -178,6 +191,7 @@
     function updateFilters() {
         const selCats = Array.from(document.querySelectorAll('.f-cat:checked')).map(i => i.value);
         const selSizes = Array.from(document.querySelectorAll('.f-size:checked')).map(i => parseInt(i.value));
+        const selRates = Array.from(document.querySelectorAll('.f-rate:checked')).map(i => i.value); // スキ率フィルター取得
         const sortVal = document.getElementById('sort-order').value;
         const searchText = document.getElementById('search-input').value.toLowerCase();
 
@@ -185,7 +199,21 @@
             const catMatch = selCats.length === 0 || selCats.includes(p.cat);
             const sizeMatch = selSizes.length === 0 || selSizes.some(s => p.size >= s && p.size < (s + 1));
             const searchMatch = p.model.toLowerCase().includes(searchText) || p.series.toLowerCase().includes(searchText);
-            return catMatch && sizeMatch && searchMatch;
+            
+            // スキ率判定ロジック
+            let rateMatch = true;
+            if (selRates.length > 0) {
+                if (p.cat.includes('牙剪')) {
+                    rateMatch = selRates.some(r => {
+                        const [min, max] = r.split('-').map(Number);
+                        return p.rate >= min && p.rate < max;
+                    });
+                } else {
+                    rateMatch = false; 
+                }
+            }
+
+            return catMatch && sizeMatch && searchMatch && rateMatch;
         });
 
         if (sortVal === 'price-asc') filtered.sort((a, b) => a.specialPrice - b.specialPrice);
